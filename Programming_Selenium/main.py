@@ -1,62 +1,43 @@
-import selenium
-import pyperclip
-import time
-from selenium.webdriver.common.keys import Keys
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import json
+import re
 
-# from config import CHROME_PROFILE_PATH
-# options = webdriver.ChromeOptions()
-# options.add_argument(CHROME_PROFILE_PATH)
 
-# chrome_options=webdriver.ChromeOptions()
-driver = webdriver.Chrome(
-    executable_path=r'C:/Users/kashi/AppData/Local/Temp/Temp1_chromedriver_win32.zip/chromedriver.exe')
+def extract_data_from_message(message):
+    # Extract the date and time from the beginning of the message (assuming it's in the format "DD/MM/YY HH:MM:SS")
+    date_time_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{2}:\d{2}) - (.+): (.+)', message)
+    date_time = date_time_match.group(1) if date_time_match else None
+    # Extract the sender and message text from the rest of the message
+    sender_match = re.search(r'[\+]?[\(]?[\d]{1,3}[\)]?[\s|\-|\.]?[\d]{3}[\s|\-|\.]?[\d]{3}[\s|\-|\.]?[\d]{1}', message)
+    sender = sender_match.group() if sender_match else None
+    message_text = message[sender_match.end():] if sender_match else message
+    # Split the date and time into separate date and time values
+    date, time = date_time.split(',') if date_time else (None, None)
+    return date, time, sender, message_text
 
-driver.get("https://web.whatsapp.com")
-driver.maximize_window()
-with open('grp names.txt', 'r', encoding='utf8') as file:
-    groups = [group.strip() for group in file.readlines()]
-with open('msg.txt', 'r', encoding='utf8') as file:
-    msg = file.read()
-# print(msg)
-# print(groups)
 
-for group in groups:
-    search_box_xpath = '//div[@contenteditable="true"][@data-tab="3"]'
-    # search_box = driver.find_element("class name","_3FRCZ")
-    search_box = WebDriverWait(driver, 500).until(
-        EC.presence_of_element_located((By.XPATH, search_box_xpath))
-    )
-    # search_box.send_keys(group)
-    text_to_be_searched = 'accommodation'
-    search_box.send_keys('text_to_be_searched')
-    # search_box.send_keys(Keys.RETURN)
+def split_by_messages(chat_content):
+    # Split the chat content into messages using the timestamp as a delimiter
+    # (assuming the timestamp is in the format "DD/MM/YYYY HH:MM:SS")
+    return re.split(r"(^\d{2}/\d{2}/\d{2}, \d{2}:\d{2})", chat_content, flags=re.MULTILINE)
 
-    time.sleep(60)
-    search_box.clear()
-    
-    messages = driver.find_elements(By., ".message-text")
-    for message in messages:
-        if 'accommodation' in message.text:
-            text_with_acc = pyperclip.copy(message.text)
-            print(text_with_acc)
 
-    #pyperclip.copy(group)
-    #search_box.send_keys(Keys.CONTROL + "v")
+# Extract the relevant data from the messages
+# (You'll need to figure out what data you want to extract and how to extract it)
+# For example, you might want to extract the date, time, sender, and message for each message
 
-    time.sleep(1.5)
-    #group_title_xpath = f'//span[@title="{group}"]'
-    #group_title = driver.find_element("xpath", group_title_xpath)
-    #group_title.click()
+chat_content_file = r"C:\Users\kashi\Downloads\WhatsApp Chat with NEU MEM’22.txt"
 
-    time.sleep(1.5)
-    #message_box_xpath = '//div[@title="Type a message"]'
-    #message_box = driver.find_element("xpath", message_box_xpath)
-    #pyperclip.copy(msg)
+# Open the exported chat file
+with open(chat_content_file, 'r',  encoding='utf-8') as f:
+    chat_content = f.read()
 
-    #message_box.send_keys(Keys.CONTROL + "v")
-    #message_box.send_keys(Keys.ENTER)
-    time.sleep(2)
+# Split the chat content into messages
+messages = split_by_messages(chat_content)
+extracted_data = []
+for message in messages:
+    # Extract the date, time, sender, and message for each message
+    date, time, sender, message_text = extract_data_from_message(message)
+    extracted_data.append({'date': date, 'time': time, 'sender': sender, 'message': message_text})
+
+with open('chat.json', 'w') as f:
+    json.dump(extracted_data, f)
